@@ -12,7 +12,7 @@ class AlertScreen extends StatelessWidget {
           style: TextStyle(fontSize: 24, color: Colors.white),
         ),
       ),
-      backgroundColor: const Color.fromARGB(255, 0, 0, 0),
+     
     );
   }
 }
