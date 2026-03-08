@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'dart:io';
 
 class ChatApi {
-  static const _apiKey =
-      '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';
-  static const _apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+  static const _apiKey = String.fromEnvironment('GROQ_API_KEY');
+  static const _apiUrl = String.fromEnvironment(
+    'GROQ_API_URL',
+    defaultValue: 'https://api.groq.com/openai/v1/chat/completions',
+  );
 
   // Modelo correcto para Groq
-  static const _model = 'llama-3.1-8b-instant';
+  static const _model = String.fromEnvironment(
+    'GROQ_MODEL',
+    defaultValue: 'llama-3.1-8b-instant',
+  );
 
   final HttpClient _httpClient = HttpClient();
 
@@ -21,6 +26,13 @@ class ChatApi {
   ];
 
   Future<String> sendMessage(String message) async {
+    if (_apiKey.isEmpty) {
+      throw StateError(
+        'Falta GROQ_API_KEY. Define --dart-define=GROQ_API_KEY=TU_API_KEY '
+        '(o usa --dart-define-from-file) antes de ejecutar la app.',
+      );
+    }
+
     _history.add({'role': 'user', 'content': message});
 
     try {
