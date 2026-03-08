@@ -19,19 +19,22 @@ class TimeRecordAdapter extends TypeAdapter<TimeRecord> {
     return TimeRecord(
       fecha: fields[0] as String,
       timeMilis: fields[1] as int,
-      cont: fields[2] as int,
+      cont: fields[3] as int,
+      lastTimeMilis: fields[2] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, TimeRecord obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.fecha)
       ..writeByte(1)
       ..write(obj.timeMilis)
       ..writeByte(2)
+      ..write(obj.lastTimeMilis)
+      ..writeByte(3)
       ..write(obj.cont);
   }
 

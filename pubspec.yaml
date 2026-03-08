@@ -15,10 +15,15 @@ dependencies:
   percent_indicator: ^4.2.2
   syncfusion_flutter_gauges: ^24.2.8
   fl_chart: ^1.0.0
+  flutter_svg: ^2.2.0
   
+  shared_preferences: ^2.2.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   path_provider: ^2.1.2
+  intl: ^0.19.0
+  
+  rive: ^0.12.4
   
 
 
@@ -35,3 +40,5 @@ flutter:
 
   assets:
     - assets/images/esp32_wroom_32e.webp
+    - assets/icons/ico1.svg
+    - assets/animate/logo.riv

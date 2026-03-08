@@ -4,6 +4,7 @@ class ESP32Data {
   final double temperatura;
   final int timeon;
   final double corriente;
+  final int alertas; // ← nuevo campo agregado
 
   ESP32Data({
     required this.estado,
@@ -11,6 +12,7 @@ class ESP32Data {
     required this.temperatura,
     required this.corriente,
     required this.timeon,
+    required this.alertas, // ← incluir en constructor
   });
 
   factory ESP32Data.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class ESP32Data {
       temperatura: (json['temperatura'] ?? 0).toDouble(),
       corriente: (json['corriente'] ?? 0).toDouble(),
       timeon: json['timeon'] ?? 0,
+      alertas: json['alertas'] ?? 0, // ← leer el byte de alertas
     );
   }
 }
