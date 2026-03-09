@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../models/esp32_data.dart';
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
+
+import '../../models/esp32_data.dart';
 
 class BLEController extends ChangeNotifier {
   BluetoothDevice? connectedDevice;
@@ -15,13 +16,19 @@ class BLEController extends ChangeNotifier {
   bool isScanning = false;
   ESP32Data? lastData;
   int _savedTimeOn = 0;
+  String? lastBleError;
+  final List<double> _currentHistory = <double>[];
+  final List<double> _temperatureHistory = <double>[];
 
   final String serviceUUID = "12345678-1234-5678-9abc-def123456789";
   final String txCharacteristicUUID = "87654321-4321-8765-cba9-fed987654321";
   final String rxCharacteristicUUID = "11111111-2222-3333-4444-555555555555";
+  static const int sensorHistoryLimit = 60;
 
   StreamSubscription<List<ScanResult>>? scanSubscription;
   StreamSubscription<List<int>>? characteristicSubscription;
+  StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
+  Timer? _scanTimeoutTimer;
 
   static const String _timeOnKey = 'last_time_on';
 
@@ -61,6 +68,11 @@ class BLEController extends ChangeNotifier {
     return isConnected ? currentTimeOn : _savedTimeOn;
   }
 
+  List<double> get currentHistory => List<double>.unmodifiable(_currentHistory);
+
+  List<double> get temperatureHistory =>
+      List<double>.unmodifiable(_temperatureHistory);
+
   Future<bool> requestPermissions() async {
     final statuses = await [
       Permission.bluetooth,
@@ -69,9 +81,15 @@ class BLEController extends ChangeNotifier {
       Permission.locationWhenInUse,
     ].request();
 
-    return statuses.values.every(
+    final granted = statuses.values.every(
       (status) => status.isGranted || status.isLimited,
     );
+
+    if (!granted) {
+      await stopScan(reason: 'Permisos BLE rechazados');
+    }
+
+    return granted;
   }
 
   Future<bool> hasBlePermissions() async {
@@ -98,57 +116,113 @@ class BLEController extends ChangeNotifier {
       return;
     }
 
-    FlutterBluePlus.adapterState.listen((state) async {
+    await _adapterStateSubscription?.cancel();
+    _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
       if (state != BluetoothAdapterState.on) {
         print("Bluetooth apagado");
       }
     });
   }
 
-  void startScan() async {
-    if (!await hasBlePermissions()) {
-      print("Permisos BLE no concedidos");
-      return;
-    }
+  Future<void> stopScan({String? reason}) async {
+    lastBleError = reason;
 
-    FlutterBluePlus.adapterState.listen((state) async {
-      if (state != BluetoothAdapterState.on) {
-        print("Bluetooth apagado");
-        await FlutterBluePlus.turnOn();
+    _scanTimeoutTimer?.cancel();
+    _scanTimeoutTimer = null;
+
+    try {
+      await scanSubscription?.cancel();
+    } catch (_) {}
+    scanSubscription = null;
+
+    try {
+      final dynamic stopResult = FlutterBluePlus.stopScan();
+      if (stopResult is Future) {
+        await stopResult;
       }
-    });
+    } catch (_) {}
 
+    if (isScanning) {
+      isScanning = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> _ensureBluetoothOn() async {
+    BluetoothAdapterState? adapterState;
+    try {
+      adapterState = await FlutterBluePlus.adapterState.first.timeout(
+        const Duration(seconds: 1),
+      );
+    } catch (_) {}
+
+    if (adapterState == BluetoothAdapterState.on) return true;
+
+    try {
+      await FlutterBluePlus.turnOn();
+    } catch (_) {}
+
+    try {
+      await FlutterBluePlus.adapterState
+          .where((s) => s == BluetoothAdapterState.on)
+          .first
+          .timeout(const Duration(seconds: 8));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void startScan() async {
     if (isScanning) return;
 
     isScanning = true;
+    lastBleError = null;
     notifyListeners();
 
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+    try {
+      final granted = await requestPermissions();
+      if (!granted) {
+        await stopScan(reason: 'Permisos BLE rechazados');
+        return;
+      }
 
-    scanSubscription = FlutterBluePlus.scanResults.listen((results) {
-      for (ScanResult result in results) {
-        if (result.device.platformName == "ESP32-Motor-Control") {
-          print("ESP32 encontrado");
-          FlutterBluePlus.stopScan();
-          connectToDevice(result.device);
-          break;
+      final bluetoothOn = await _ensureBluetoothOn();
+      if (!bluetoothOn) {
+        await stopScan(reason: 'Bluetooth no activado');
+        return;
+      }
+
+      await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
+
+      await scanSubscription?.cancel();
+      scanSubscription = FlutterBluePlus.scanResults.listen((results) {
+        for (final result in results) {
+          if (result.device.platformName == "ESP32-Motor-Control") {
+            print("ESP32 encontrado");
+            stopScan();
+            connectToDevice(result.device);
+            break;
+          }
         }
-      }
-    });
+      }, onError: (e) {
+        stopScan(reason: 'Error de escaneo: $e');
+      });
 
-    Timer(const Duration(seconds: 10), () {
-      if (isScanning) {
-        FlutterBluePlus.stopScan();
-        isScanning = false;
-        notifyListeners();
-      }
-    });
+      _scanTimeoutTimer?.cancel();
+      _scanTimeoutTimer = Timer(const Duration(seconds: 10), () {
+        stopScan(reason: 'Timeout de escaneo');
+      });
+    } catch (e) {
+      await stopScan(reason: 'Error al iniciar escaneo: $e');
+    }
   }
 
   void connectToDevice(BluetoothDevice device) async {
     try {
       await device.connect();
       connectedDevice = device;
+      _clearSensorHistory();
 
       device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
@@ -191,6 +265,8 @@ class BLEController extends ChangeNotifier {
       final jsonString = utf8.decode(data);
       final jsonData = json.decode(jsonString);
       lastData = ESP32Data.fromJson(jsonData);
+      _appendSensorValue(_currentHistory, lastData!.corriente);
+      _appendSensorValue(_temperatureHistory, lastData!.temperatura);
 
       if (lastData?.timeon != null) {
         _saveTimeOn(lastData!.timeon);
@@ -214,6 +290,18 @@ class BLEController extends ChangeNotifier {
     rxCharacteristic = null;
     isConnected = false;
     notifyListeners();
+  }
+
+  void _appendSensorValue(List<double> target, double value) {
+    target.add(value);
+    if (target.length > sensorHistoryLimit) {
+      target.removeAt(0);
+    }
+  }
+
+  void _clearSensorHistory() {
+    _currentHistory.clear();
+    _temperatureHistory.clear();
   }
 
   void sendCommand(String estado, {bool apagadoEmergencia = false}) async {
@@ -271,8 +359,12 @@ class BLEController extends ChangeNotifier {
       _saveTimeOn(lastData!.timeon);
     }
 
+    _scanTimeoutTimer?.cancel();
+    _scanTimeoutTimer = null;
+
     scanSubscription?.cancel();
     characteristicSubscription?.cancel();
+    _adapterStateSubscription?.cancel();
     disconnect();
     super.dispose();
   }

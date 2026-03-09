@@ -9,6 +9,7 @@ import 'package:app_proyect/models/time_record.dart';
 import 'package:app_proyect/providers/time_record_helper.dart';
 import 'package:app_proyect/core/utils/time_records_utils.dart';
 import 'package:app_proyect/shared/widgets/picker_item.dart';
+import 'package:app_proyect/shared/widgets/realtime_sensor_chart.dart';
 import 'package:app_proyect/shared/widgets/weekly_bar_chart.dart';
 import 'package:app_proyect/shared/widgets/show_modal_bottom_sheet.dart';
 
@@ -66,8 +67,12 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
               child: Column(
                 children: [
                   _buildResumenCard(),
+                  const SizedBox(height: 16)
+                  ,_buildOperationCard(registrosFiltrados),
                   const SizedBox(height: 16),
-                  _buildOperationCard(registrosFiltrados),
+                  Consumer<BLEController>(
+                    builder: (context, ble, _) => _buildRealtimeSensorsCard(ble),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -140,6 +145,43 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
           _buildButtonDate(),
           const SizedBox(height: 16),
           WeeklyBarChart(registros: registrosFiltrados),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRealtimeSensorsCard(BLEController ble) {
+    return InfoCard(
+      title: 'Monitoreo en tiempo real',
+      icon: Icons.multiline_chart,
+      height: 500,
+      child: Column(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Ultimos ${BLEController.sensorHistoryLimit} valores recibidos',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          RealtimeSensorChart(
+            title: 'Corriente',
+            unit: 'A',
+            color: AppColors.primaryVariant,
+            values: ble.currentHistory,
+          ),
+          const SizedBox(height: 20),
+          RealtimeSensorChart(
+            title: 'Temperatura',
+            unit: '°C',
+            color: AppColors.secondary,
+            values: ble.temperatureHistory,
+          ),
         ],
       ),
     );

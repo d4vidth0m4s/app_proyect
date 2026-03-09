@@ -208,6 +208,7 @@ class HomeScreen extends StatelessWidget {
     if (!context.mounted) return;
 
     if (!granted) {
+      await ble.stopScan(reason: 'Permisos BLE rechazados');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(

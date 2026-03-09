@@ -49,6 +49,23 @@ class ConfigBottomSheet extends StatelessWidget {
 
         const SizedBox(height: 24),
 
+        if (!ble.isConnected && ble.lastBleError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Text(
+              ble.lastBleError!,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+
+        if (!ble.isConnected && ble.lastBleError != null)
+          const SizedBox(height: 12),
+
         if (!ble.isConnected)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
