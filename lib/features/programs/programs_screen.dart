@@ -1,17 +1,18 @@
 import 'package:app_proyect/core/constants/app_constants.dart';
-import 'package:app_proyect/models/semana_data.dart';
+import 'package:app_proyect/core/utils/time_records_utils.dart';
 import 'package:app_proyect/data/ble/ble_controller.dart';
-import 'package:app_proyect/shared/widgets/info_card.dart';
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-
+import 'package:app_proyect/features/chat/chat_screen.dart';
+import 'package:app_proyect/features/chat/services/ble_chatbot_message_builder.dart';
+import 'package:app_proyect/models/semana_data.dart';
 import 'package:app_proyect/models/time_record.dart';
 import 'package:app_proyect/providers/time_record_helper.dart';
-import 'package:app_proyect/core/utils/time_records_utils.dart';
+import 'package:app_proyect/shared/widgets/info_card.dart';
 import 'package:app_proyect/shared/widgets/picker_item.dart';
 import 'package:app_proyect/shared/widgets/realtime_sensor_chart.dart';
-import 'package:app_proyect/shared/widgets/weekly_bar_chart.dart';
 import 'package:app_proyect/shared/widgets/show_modal_bottom_sheet.dart';
+import 'package:app_proyect/shared/widgets/weekly_bar_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ProgramsScreen extends StatefulWidget {
   const ProgramsScreen({super.key});
@@ -35,17 +36,17 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     final ble = context.read<BLEController>();
     final int tiempoActual = ble.getCurrentTimeOn();
 
-    // Guardar tiempo actual
     await TimeRecordHelper.registrarTiempo(tiempoActual);
 
-    // Cargar registros desde Hive
     final datos = await TimeRecordHelper.obtenerTodosLosRegistros();
     final semanas = TimeRecordsUtils.agruparRegistrosPorSemanaLista(datos);
+
+    if (!mounted) return;
 
     setState(() {
       _registros = datos;
       _semanas = semanas;
-      indiceSeleccionado = semanas.length - 1;
+      indiceSeleccionado = semanas.isEmpty ? 0 : semanas.length - 1;
     });
   }
 
@@ -67,8 +68,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
               child: Column(
                 children: [
                   _buildResumenCard(),
-                  const SizedBox(height: 16)
-                  ,_buildOperationCard(registrosFiltrados),
+                  const SizedBox(height: 16),
+                  _buildOperationCard(registrosFiltrados),
                   const SizedBox(height: 16),
                   Consumer<BLEController>(
                     builder: (context, ble, _) => _buildRealtimeSensorsCard(ble),
@@ -99,20 +100,19 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
     final String sumaStr = formatearMinutos(minutosTotal);
     final String lastStr = formatearMinutos(minutosLast);
-    const String fecha = 'Hoy';
 
     return InfoCard(
-      title: 'Ãšltimo registro',
+      title: 'Ultimo registro',
       icon: Icons.query_stats,
       height: 160,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildResumenItem('Fecha', fecha, Icons.calendar_today),
+            _buildResumenItem('Fecha', 'Hoy', Icons.calendar_today),
             _buildResumenItem('Total', sumaStr, Icons.summarize),
-            _buildResumenItem('Ãšltimo', lastStr, Icons.update),
+            _buildResumenItem('Ultimo', lastStr, Icons.update),
           ],
         ),
       ),
@@ -137,7 +137,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
   Widget _buildOperationCard(List<TimeRecord> registrosFiltrados) {
     return InfoCard(
-      title: 'Tiempo de operaciÃ³n semanal',
+      title: 'Tiempo de operacion semanal',
       icon: Icons.timer,
       height: 400,
       child: Column(
@@ -154,13 +154,13 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     return InfoCard(
       title: 'Monitoreo en tiempo real',
       icon: Icons.multiline_chart,
-      height: 500,
+      height: 560,
       child: Column(
         children: [
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Ultimos ${BLEController.sensorHistoryLimit} valores recibidos',
+              'Ultimos valores recibidos',
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 12,
@@ -178,9 +178,26 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
           const SizedBox(height: 20),
           RealtimeSensorChart(
             title: 'Temperatura',
-            unit: '°C',
+            unit: 'C',
             color: AppColors.secondary,
             values: ble.temperatureHistory,
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _openChatWithSensorMessage(context, ble),
+              icon: const Icon(Icons.smart_toy_outlined),
+              label: const Text('Consultar al chatbot'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryVariant,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -205,6 +222,26 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
             const Icon(Icons.keyboard_arrow_down_rounded),
           ],
         ),
+      ),
+    );
+  }
+
+  void _openChatWithSensorMessage(BuildContext context, BLEController ble) {
+    final initialMessage = BleChatbotMessageBuilder.build(
+      isConnected: ble.isConnected,
+      isScanning: ble.isScanning,
+      deviceName: ble.connectedDevice?.platformName,
+      deviceId: ble.connectedDevice?.remoteId.str,
+      lastBleError: ble.lastBleError,
+      lastData: ble.lastData,
+      savedTimeOn: ble.getCurrentTimeOn(),
+      sensorSummary: ble.chartNotifier.buildSensorSummary(),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(initialMessage: initialMessage),
       ),
     );
   }

@@ -2,18 +2,17 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class ChatApi {
-  static const _apiKey = String.fromEnvironment('GROQ_API_KEY');
-  static const _apiUrl = String.fromEnvironment(
-    'GROQ_API_URL',
-    defaultValue: 'https://api.groq.com/openai/v1/chat/completions',
-  );
+  static final _apiKey = dotenv.env['GROQ_API_KEY'] ?? '';
+  static final _apiUrl =
+      dotenv.env['GROQ_API_URL'] ??
+      'https://api.groq.com/openai/v1/chat/completions';
 
   // Modelo correcto para Groq
-  static const _model = String.fromEnvironment(
-    'GROQ_MODEL',
-    defaultValue: 'llama-3.1-8b-instant',
-  );
+  static final _model =
+      dotenv.env['GROQ_MODEL'] ?? 'llama-3.1-8b-instant';
 
   final HttpClient _httpClient = HttpClient();
 

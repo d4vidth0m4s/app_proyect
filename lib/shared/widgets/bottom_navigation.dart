@@ -13,6 +13,10 @@ class BottomNavigation extends StatefulWidget {
 
 class _BottomNavigationState extends State<BottomNavigation> {
   int _currentIndex = 0;
+  static const double _gradientInitialStop = 0.0;
+  static const double _gradientPercent1 = 0.35;
+  static const double _gradientPercent2 = 0.70;
+  static const double _gradientPercent3 = 1.0;
 
   final List<Widget> _pages = [
     const HomeScreen(),
@@ -22,54 +26,74 @@ class _BottomNavigationState extends State<BottomNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: _pages[_currentIndex],
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Container(
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(35),
-              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 5)],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(
-                  icon: Icons.home_outlined,
-                  label: 'Inicio',
-                  index: 0,
-                ),
-                _buildNavItem(
-                  icon: Icons.list_alt_outlined,
-                  label: 'Programas',
-                  index: 1,
-                ),
-                _buildNavItem(
-                  icon: Icons.warning_amber_outlined,
-                  label: 'Alertas',
-                  index: 2,
-                ),
-              ],
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: IndexedStack(index: _currentIndex, children: _pages),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: SizedBox(
+              height: 60 + bottomInset,
+              child: Stack(
+                children: [
+                  IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColors.background.withValues(alpha: 0),
+                            AppColors.background.withValues(alpha: 0.55),
+                            AppColors.background.withValues(alpha: 0.99),
+                            AppColors.background,
+                          ],
+                          stops: [
+                            _gradientInitialStop,
+                            _gradientPercent1,
+                            _gradientPercent2,
+                            _gradientPercent3,
+                          ],
+                        ),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: bottomInset),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(icon: Icons.home_outlined, index: 0),
+                        _buildNavItem(icon: Icons.list_alt_outlined, index: 1),
+                        _buildNavItem(
+                          icon: Icons.warning_amber_outlined,
+                          index: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required int index,
-  }) {
+  Widget _buildNavItem({required IconData icon, required int index}) {
     final bool isSelected = _currentIndex == index;
 
     return GestureDetector(
-      behavior: HitTestBehavior.translucent,
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         setState(() {
           _currentIndex = index;
@@ -78,37 +102,20 @@ class _BottomNavigationState extends State<BottomNavigation> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.onSurface : Colors.transparent,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(25),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                if (isSelected) SizedBox(width: 45, height: 45),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Icon(
-                    icon,
-                    color: isSelected ? Colors.black : Colors.grey,
-                    size: 25,
-                  ),
-                ),
-              ],
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Icon(
+                icon,
+                color: isSelected ? AppColors.primaryVariant : Colors.grey,
+                size: 25,
               ),
-            ],
+            ),
           ],
         ),
       ),

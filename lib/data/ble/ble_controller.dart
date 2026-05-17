@@ -1,9 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:app_proyect/features/chat/services/sensor_chart_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:async';
-import 'dart:convert';
 
 import '../../models/esp32_data.dart';
 
@@ -12,18 +14,17 @@ class BLEController extends ChangeNotifier {
   BluetoothCharacteristic? txCharacteristic;
   BluetoothCharacteristic? rxCharacteristic;
 
+  final SensorChartNotifier chartNotifier = SensorChartNotifier(limit: 1000);
+
   bool isConnected = false;
   bool isScanning = false;
   ESP32Data? lastData;
   int _savedTimeOn = 0;
   String? lastBleError;
-  final List<double> _currentHistory = <double>[];
-  final List<double> _temperatureHistory = <double>[];
 
-  final String serviceUUID = "12345678-1234-5678-9abc-def123456789";
-  final String txCharacteristicUUID = "87654321-4321-8765-cba9-fed987654321";
-  final String rxCharacteristicUUID = "11111111-2222-3333-4444-555555555555";
-  static const int sensorHistoryLimit = 60;
+  final String serviceUUID = '12345678-1234-5678-9abc-def123456789';
+  final String txCharacteristicUUID = '87654321-4321-8765-cba9-fed987654321';
+  final String rxCharacteristicUUID = '11111111-2222-3333-4444-555555555555';
 
   StreamSubscription<List<ScanResult>>? scanSubscription;
   StreamSubscription<List<int>>? characteristicSubscription;
@@ -45,9 +46,9 @@ class BLEController extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       _savedTimeOn = prefs.getInt(_timeOnKey) ?? 0;
-      print("TimeOn cargado desde almacenamiento: $_savedTimeOn ms");
+      print('TimeOn cargado desde almacenamiento: $_savedTimeOn ms');
     } catch (e) {
-      print("Error al cargar timeOn: $e");
+      print('Error al cargar timeOn: $e');
       _savedTimeOn = 0;
     }
   }
@@ -57,9 +58,9 @@ class BLEController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_timeOnKey, timeOn);
       _savedTimeOn = timeOn;
-      print("TimeOn guardado: $timeOn ms");
+      print('TimeOn guardado: $timeOn ms');
     } catch (e) {
-      print("Error al guardar timeOn: $e");
+      print('Error al guardar timeOn: $e');
     }
   }
 
@@ -68,10 +69,8 @@ class BLEController extends ChangeNotifier {
     return isConnected ? currentTimeOn : _savedTimeOn;
   }
 
-  List<double> get currentHistory => List<double>.unmodifiable(_currentHistory);
-
-  List<double> get temperatureHistory =>
-      List<double>.unmodifiable(_temperatureHistory);
+  List<double> get currentHistory => chartNotifier.current;
+  List<double> get temperatureHistory => chartNotifier.temperature;
 
   Future<bool> requestPermissions() async {
     final statuses = await [
@@ -112,14 +111,14 @@ class BLEController extends ChangeNotifier {
 
   void initBLE() async {
     if (!await FlutterBluePlus.isSupported) {
-      print("Bluetooth no soportado");
+      print('Bluetooth no soportado');
       return;
     }
 
     await _adapterStateSubscription?.cancel();
     _adapterStateSubscription = FlutterBluePlus.adapterState.listen((state) {
       if (state != BluetoothAdapterState.on) {
-        print("Bluetooth apagado");
+        print('Bluetooth apagado');
       }
     });
   }
@@ -198,8 +197,8 @@ class BLEController extends ChangeNotifier {
       await scanSubscription?.cancel();
       scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (final result in results) {
-          if (result.device.platformName == "ESP32-Motor-Control") {
-            print("ESP32 encontrado");
+          if (result.device.platformName == 'ESP32-Motor-Control') {
+            print('ESP32 encontrado');
             stopScan();
             connectToDevice(result.device);
             break;
@@ -222,7 +221,7 @@ class BLEController extends ChangeNotifier {
     try {
       await device.connect();
       connectedDevice = device;
-      _clearSensorHistory();
+      chartNotifier.clear();
 
       device.connectionState.listen((state) {
         if (state == BluetoothConnectionState.disconnected) {
@@ -231,10 +230,10 @@ class BLEController extends ChangeNotifier {
       });
 
       final services = await device.discoverServices();
-      for (var service in services) {
+      for (final service in services) {
         if (service.uuid.toString().toLowerCase() ==
             serviceUUID.toLowerCase()) {
-          for (var characteristic in service.characteristics) {
+          for (final characteristic in service.characteristics) {
             final uuid = characteristic.uuid.toString().toLowerCase();
 
             if (uuid == txCharacteristicUUID.toLowerCase()) {
@@ -252,9 +251,9 @@ class BLEController extends ChangeNotifier {
       isConnected = true;
       isScanning = false;
       notifyListeners();
-      print("Conectado al ESP32");
+      print('Conectado al ESP32');
     } catch (e) {
-      print("Error al conectar: $e");
+      print('Error al conectar: $e');
       isScanning = false;
       notifyListeners();
     }
@@ -265,22 +264,22 @@ class BLEController extends ChangeNotifier {
       final jsonString = utf8.decode(data);
       final jsonData = json.decode(jsonString);
       lastData = ESP32Data.fromJson(jsonData);
-      _appendSensorValue(_currentHistory, lastData!.corriente);
-      _appendSensorValue(_temperatureHistory, lastData!.temperatura);
+
+      chartNotifier.addValues(lastData!.corriente, lastData!.temperatura);
 
       if (lastData?.timeon != null) {
         _saveTimeOn(lastData!.timeon);
       }
 
       notifyListeners();
-      print("Datos recibidos: $jsonString");
+      print('Datos recibidos: $jsonString');
     } catch (e) {
-      print("Error al decodificar datos: $e");
+      print('Error al decodificar datos: $e');
     }
   }
 
   void _handleDisconnection() {
-    print("Desconectado del ESP32");
+    print('Desconectado del ESP32');
     if (lastData?.timeon != null) {
       _saveTimeOn(lastData!.timeon);
     }
@@ -292,27 +291,15 @@ class BLEController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _appendSensorValue(List<double> target, double value) {
-    target.add(value);
-    if (target.length > sensorHistoryLimit) {
-      target.removeAt(0);
-    }
-  }
-
-  void _clearSensorHistory() {
-    _currentHistory.clear();
-    _temperatureHistory.clear();
-  }
-
   void sendCommand(String estado, {bool apagadoEmergencia = false}) async {
     if (!isConnected || rxCharacteristic == null) {
-      print("No conectado");
+      print('No conectado');
       return;
     }
 
     final command = {
-      "estado": estado,
-      "apagadodeemergencia": apagadoEmergencia,
+      'estado': estado,
+      'apagadodeemergencia': apagadoEmergencia,
     };
 
     final jsonString = json.encode(command);
@@ -320,9 +307,9 @@ class BLEController extends ChangeNotifier {
 
     try {
       await rxCharacteristic!.write(bytes);
-      print("Comando enviado: $jsonString");
+      print('Comando enviado: $jsonString');
     } catch (e) {
-      print("Error al enviar comando: $e");
+      print('Error al enviar comando: $e');
     }
   }
 
@@ -347,9 +334,9 @@ class BLEController extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_timeOnKey);
       _savedTimeOn = 0;
-      print("Datos guardados limpiados");
+      print('Datos guardados limpiados');
     } catch (e) {
-      print("Error al limpiar datos: $e");
+      print('Error al limpiar datos: $e');
     }
   }
 
@@ -365,6 +352,7 @@ class BLEController extends ChangeNotifier {
     scanSubscription?.cancel();
     characteristicSubscription?.cancel();
     _adapterStateSubscription?.cancel();
+    chartNotifier.dispose();
     disconnect();
     super.dispose();
   }

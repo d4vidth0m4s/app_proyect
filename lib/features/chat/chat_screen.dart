@@ -1,13 +1,15 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:app_proyect/data/remote/chat_api.dart';
 import 'package:app_proyect/features/chat/widgets/chat_message.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+  final String? initialMessage;
+
+  const ChatScreen({super.key, this.initialMessage});
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -21,18 +23,26 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _initializeChat();
+    _sendInitialMessage();
   }
 
-  // FunciÃ³n para inicializar el chat con mensaje de bienvenida
   void _initializeChat() {
     _addMessage(
-      text:
-          "Â¡Hola! Soy tu asistente experto en cerdos PIGBOT. Â¿En quÃ© puedo ayudarte hoy?",
+      text: 'Hola. Soy tu asistente experto en cerdos PIGBOT. En que puedo ayudarte hoy?',
       isUser: false,
     );
   }
 
-  // FunciÃ³n para agregar mensajes a la lista
+  void _sendInitialMessage() {
+    final initialMessage = widget.initialMessage?.trim();
+    if (initialMessage == null || initialMessage.isEmpty) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _handleSubmitted(initialMessage);
+    });
+  }
+
   void _addMessage({
     required String text,
     required bool isUser,
@@ -53,68 +63,59 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
   }
 
-  // FunciÃ³n para hacer scroll hacia abajo
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      if (!_scrollController.hasClients) return;
+
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     });
   }
 
-  // FunciÃ³n para validar el mensaje antes de enviarlo
   bool _isValidMessage(String text) {
     return text.trim().isNotEmpty && !_isWaitingForResponse;
   }
 
-  // FunciÃ³n para mostrar el indicador de escritura
   void _showTypingIndicator() {
-    _addMessage(text: "...", isUser: false, isTyping: true);
+    _addMessage(text: '...', isUser: false, isTyping: true);
   }
 
-  // FunciÃ³n para remover el Ãºltimo mensaje (usado para el indicador de escritura)
   void _removeLastMessage() {
-    if (_messages.isNotEmpty) {
-      setState(() {
-        _messages.removeLast();
-      });
-    }
+    if (_messages.isEmpty) return;
+
+    setState(() {
+      _messages.removeLast();
+    });
   }
 
-  // FunciÃ³n para manejar errores de la API
   void _handleApiError(dynamic error) {
     _removeLastMessage();
     _addMessage(
-      text: "Error: ${error.toString()}",
+      text: 'Error: ${error.toString()}',
       isUser: false,
       isError: true,
     );
   }
 
-  // FunciÃ³n para manejar respuesta exitosa de la API
   void _handleApiResponse(String response) {
     _removeLastMessage();
     _addMessage(text: response, isUser: false);
   }
 
-  // FunciÃ³n para enviar mensaje del usuario
   void _sendUserMessage(String text) {
     _messageController.clear();
     _addMessage(text: text, isUser: true);
   }
 
-  // FunciÃ³n para establecer el estado de espera
   void _setWaitingState(bool isWaiting) {
     setState(() {
       _isWaitingForResponse = isWaiting;
     });
   }
 
-  // FunciÃ³n principal para manejar el envÃ­o de mensajes
   Future<void> _handleSubmitted(String text) async {
     if (!_isValidMessage(text)) return;
 
@@ -132,7 +133,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  // FunciÃ³n para construir el AppBar
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       systemOverlayStyle: SystemUiOverlayStyle.light,
@@ -141,19 +141,17 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // FunciÃ³n para construir la lista de mensajes
   Widget _buildMessagesList() {
     return Expanded(
       child: ListView.builder(
         controller: _scrollController,
         itemCount: _messages.length,
-        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         itemBuilder: (context, index) => _messages[index],
       ),
     );
   }
 
-  // FunciÃ³n para construir el campo de texto
   Widget _buildTextField() {
     return Expanded(
       child: TextField(
@@ -166,24 +164,22 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // FunciÃ³n para obtener la decoraciÃ³n del TextField
   InputDecoration _getTextFieldDecoration() {
     return InputDecoration(
       hintText: 'Escribe un mensaje...',
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20.0),
+        borderRadius: BorderRadius.circular(20),
         borderSide: BorderSide.none,
       ),
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16.0,
-        vertical: 12.0,
+        horizontal: 16,
+        vertical: 12,
       ),
       filled: true,
       fillColor: const Color.fromARGB(255, 233, 232, 245),
     );
   }
 
-  // FunciÃ³n para construir el botÃ³n de envÃ­o
   Widget _buildSendButton() {
     return IconButton(
       icon: const Icon(Icons.send),
@@ -194,7 +190,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // FunciÃ³n para obtener la decoraciÃ³n del contenedor del compositor
   BoxDecoration _getComposerDecoration() {
     return BoxDecoration(
       color: Theme.of(context).cardColor,
@@ -209,37 +204,37 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // FunciÃ³n para construir el compositor de mensajes
   Widget _buildMessageComposer() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 10.0),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: _getComposerDecoration(),
-      child: Row(children: [_buildTextField(), _buildSendButton()]),
+      child: Row(
+        children: [_buildTextField(), _buildSendButton()],
+      ),
     );
   }
 
-  // FunciÃ³n para construir el cuerpo principal
   Widget _buildBody() {
     return SafeArea(
-      child: Column(children: [_buildMessagesList(), _buildMessageComposer()]),
+      child: Column(
+        children: [_buildMessagesList(), _buildMessageComposer()],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(appBar: _buildAppBar(), body: _buildBody());
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _buildBody(),
+    );
   }
 
   @override
   void dispose() {
-    _disposeResources();
-    super.dispose();
-  }
-
-  // FunciÃ³n para liberar recursos
-  void _disposeResources() {
     _chatApi.dispose();
     _messageController.dispose();
     _scrollController.dispose();
+    super.dispose();
   }
 }

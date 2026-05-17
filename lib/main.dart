@@ -8,10 +8,13 @@ import 'package:app_proyect/providers/time_record_helper.dart';
 import 'package:app_proyect/shared/widgets/app_life_cycle_wrapper.dart';
 import 'package:app_proyect/shared/widgets/bottom_navigation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await dotenv.load(fileName: '.env');
 
   await TimeRecordHelper.mostrarEstadisticas();
 
