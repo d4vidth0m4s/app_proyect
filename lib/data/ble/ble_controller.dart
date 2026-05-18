@@ -35,6 +35,7 @@ class BLEController extends ChangeNotifier {
   final String txCharacteristicUUID = '87654321-4321-8765-cba9-fed987654321';
   final String rxCharacteristicUUID = '11111111-2222-3333-4444-555555555555';
 
+
   StreamSubscription<List<ScanResult>>? scanSubscription;
   StreamSubscription<List<int>>? characteristicSubscription;
   StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
@@ -111,6 +112,8 @@ class BLEController extends ChangeNotifier {
 
   List<double> get currentHistory => chartNotifier.current;
   List<double> get temperatureHistory => chartNotifier.temperature;
+
+
 
   Future<bool> requestPermissions() async {
     final statuses = await [
@@ -237,9 +240,11 @@ class BLEController extends ChangeNotifier {
       await scanSubscription?.cancel();
       scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (final result in results) {
+
           if (result.device.platformName == deviceName &&
               result.device.remoteId.str == deviceId) {
             print('ESP32 encontrado');
+
             stopScan();
             connectToDevice(result.device);
             break;
