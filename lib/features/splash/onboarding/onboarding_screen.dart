@@ -1,10 +1,13 @@
-import 'package:app_proyect/models/layout_box.dart';
-import 'package:app_proyect/core/utils/calculate_layout_values.dart';
-import 'package:app_proyect/shared/widgets/decoration.dart';
-import 'package:app_proyect/data/local/preferences/shared_preferences_service.dart';
-import 'package:flutter/material.dart';
 import 'package:app_proyect/core/constants/app_constants.dart';
+import 'package:app_proyect/core/utils/calculate_layout_values.dart';
+import 'package:app_proyect/data/ble/ble_controller.dart';
+import 'package:app_proyect/data/local/preferences/shared_preferences_service.dart';
 import 'package:app_proyect/main.dart';
+import 'package:app_proyect/models/layout_box.dart';
+import 'package:app_proyect/shared/widgets/decoration.dart';
+import 'package:app_proyect/shared/widgets/qr_device_scanner.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -18,34 +21,43 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _scaleAnimation;
+  late final List<OnboardingPage> _pages;
   final PageController _pageController = PageController();
   int _currentIndex = 0;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      title: 'Bienvenido',
-      description: 'Descubre todas las funcionalidades que tenemos para ti',
-      icon: Icons.waving_hand,
-      color: AppColors.primary,
-    ),
-    OnboardingPage(
-      title: 'Conecta con IA',
-      description:
-          'Chatea con nuestra inteligencia artificial y obtÃ©n respuestas rÃ¡pidas',
-      icon: Icons.chat_bubble_outline,
-      color: AppColors.secondary,
-    ),
-    OnboardingPage(
-      title: 'Gestiona tu tiempo',
-      description:
-          'Lleva un registro de tus actividades y mejora tu productividad',
-      icon: Icons.access_time,
-      color: AppColors.accent,
-    ),
-  ];
-
+  @override
   void initState() {
     super.initState();
+    _pages = [
+      OnboardingPage(
+        title: 'Bienvenido',
+        description: 'Descubre todas las funcionalidades que tenemos para ti',
+        icon: Icons.waving_hand,
+        color: AppColors.primary,
+      ),
+      OnboardingPage(
+        title: 'Conecta con IA',
+        description:
+            'Chatea con nuestra inteligencia artificial y obten respuestas rapidas',
+        icon: Icons.chat_bubble_outline,
+        color: AppColors.secondary,
+      ),
+      OnboardingPage(
+        title: 'Gestiona tu tiempo',
+        description:
+            'Lleva un registro de tus actividades y mejora tu productividad',
+        icon: Icons.access_time,
+        color: AppColors.accent,
+      ),
+      OnboardingPage(
+        title: 'Escanea tu dispositivo',
+        description:
+            'Escanea el QR de configuracion BLE para cargar el nombre y la direccion del dispositivo.',
+        icon: Icons.qr_code_scanner,
+        color: AppColors.primaryVariant,
+        childBuilder: _buildQrScannerPage,
+      ),
+    ];
     _initializeAnimations();
   }
 
@@ -59,16 +71,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    _scaleAnimation =
-        Tween<Offset>(
-          begin: Offset.zero, // PosiciÃ³n inicial (0, 0)
-          end: const Offset(1, 1), // PosiciÃ³n final (esquina opuesta)
-        ).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeInOutCubicEmphasized, // Curva suave
-          ),
-        );
+    _scaleAnimation = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(1, 1),
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOutCubicEmphasized,
+      ),
+    );
 
     _animationController.forward();
   }
@@ -91,14 +102,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
-  void _finishOnboarding() async {
+  Future<void> _finishOnboarding() async {
     await SharedPreferencesService.setFirstTime(false);
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
-    }
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainScreen()),
+    );
   }
 
   @override
@@ -117,6 +128,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       angle: -167.284 * (3.14159 / 180),
       color: AppColors.secondary,
     );
+
     return Container(
       decoration: BoxDecoration(color: AppColors.secondaryVariant),
       child: ClipRRect(
@@ -126,7 +138,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             buildDecoration(layoutValues, null, valuesPink, 2),
             Positioned(
               top: layoutValues.containerHeight * .31,
-
               child: AnimatedBuilder(
                 animation: Listenable.merge([_fadeAnimation, _scaleAnimation]),
                 builder: (context, child) {
@@ -137,7 +148,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         _scaleAnimation.value.dx * 0,
                         _scaleAnimation.value.dy * -100,
                       ),
-                      child: _buildcontainer(layoutValues),
+                      child: _buildContainer(layoutValues),
                     ),
                   );
                 },
@@ -149,7 +160,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildcontainer(LayoutValues layoutValues) {
+  Widget _buildContainer(LayoutValues layoutValues) {
     return Container(
       width: layoutValues.containerWidth,
       height: layoutValues.containerHeight * 0.8,
@@ -160,14 +171,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           topRight: Radius.circular(layoutValues.borderRadius),
         ),
       ),
-      child: _buildonboarding(),
+      child: _buildOnboarding(),
     );
   }
 
-  Widget _buildonboarding() {
+  Widget _buildOnboarding() {
     return Column(
       children: [
-        // BotÃ³n Skip en la esquina superior derecha
         Padding(
           padding: const EdgeInsets.all(20.0),
           child: Row(
@@ -184,7 +194,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             ],
           ),
         ),
-        // PageView con las pÃ¡ginas de onboarding
         Expanded(
           child: PageView.builder(
             controller: _pageController,
@@ -199,9 +208,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             },
           ),
         ),
-        // Indicadores de pÃ¡gina
         _buildPageIndicators(),
-        // BotÃ³n continuar
         Padding(
           padding: const EdgeInsets.all(20.0),
           child: SizedBox(
@@ -231,12 +238,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildPage(OnboardingPage page) {
+    if (page.childBuilder != null) {
+      return page.childBuilder!(context, page);
+    }
+
     return Padding(
       padding: const EdgeInsets.all(40.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icono principal
           Container(
             width: 120,
             height: 120,
@@ -247,7 +257,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             child: Icon(page.icon, size: 60, color: page.color),
           ),
           const SizedBox(height: 50),
-          // TÃ­tulo
           Text(
             page.title,
             style: const TextStyle(
@@ -258,7 +267,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
-          // DescripciÃ³n
           Text(
             page.description,
             style: const TextStyle(
@@ -269,6 +277,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQrScannerPage(BuildContext context, OnboardingPage page) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: QrDeviceScanner(
+        title: page.title,
+        description: page.description,
+        scannerHeight: 200,
+        scannerWidth: 200,
+        onConfigDetected: (config) async {
+          await context.read<BLEController>().loadDeviceConfig(config);
+          if (!mounted) return;
+          await _finishOnboarding();
+        },
       ),
     );
   }
@@ -303,11 +328,13 @@ class OnboardingPage {
   final String description;
   final IconData icon;
   final Color color;
+  final Widget Function(BuildContext context, OnboardingPage page)? childBuilder;
 
   OnboardingPage({
     required this.title,
     required this.description,
     required this.icon,
     required this.color,
+    this.childBuilder,
   });
 }

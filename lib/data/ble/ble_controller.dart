@@ -4,12 +4,19 @@ import 'dart:convert';
 import 'package:app_proyect/features/chat/services/sensor_chart_notifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/esp32_data.dart';
 
 class BLEController extends ChangeNotifier {
+  static const String _defaultDeviceName = 'ESP32-Motor-Control';
+  static const String _timeOnKey = 'last_time_on';
+  static const String _bleConfigBoxName = 'ble_config';
+  static const String _deviceNameKey = 'deviceName';
+  static const String _deviceIdKey = 'deviceId';
+
   BluetoothDevice? connectedDevice;
   BluetoothCharacteristic? txCharacteristic;
   BluetoothCharacteristic? rxCharacteristic;
@@ -20,6 +27,8 @@ class BLEController extends ChangeNotifier {
   bool isScanning = false;
   ESP32Data? lastData;
   int _savedTimeOn = 0;
+  String deviceName = _defaultDeviceName;
+  String deviceId = '';
   String? lastBleError;
 
   final String serviceUUID = '12345678-1234-5678-9abc-def123456789';
@@ -31,15 +40,46 @@ class BLEController extends ChangeNotifier {
   StreamSubscription<BluetoothAdapterState>? _adapterStateSubscription;
   Timer? _scanTimeoutTimer;
 
-  static const String _timeOnKey = 'last_time_on';
-
   BLEController() {
     _initialize();
   }
 
   Future<void> _initialize() async {
-    await _loadSavedTimeOn();
+    await Future.wait([_loadSavedTimeOn(), _loadDeviceConfig()]);
     initBLE();
+  }
+
+  Future<void> _loadDeviceConfig() async {
+    try {
+      final box = await Hive.openBox(_bleConfigBoxName);
+      final savedDeviceName = box.get(_deviceNameKey)?.toString().trim();
+      final savedDeviceId = box.get(_deviceIdKey)?.toString().trim();
+
+      deviceName = (savedDeviceName?.isNotEmpty ?? false)
+          ? savedDeviceName!
+          : _defaultDeviceName;
+      deviceId = savedDeviceId ?? '';
+    } catch (_) {
+      deviceName = _defaultDeviceName;
+      deviceId = '';
+    }
+  }
+
+  Future<void> loadDeviceConfig(Map<String, dynamic> config) async {
+    final nextDeviceName = config['deviceName']?.toString().trim();
+    final nextDeviceId = config['deviceId']?.toString().trim() ?? '';
+
+    final normalizedDeviceName = (nextDeviceName?.isNotEmpty ?? false)
+        ? nextDeviceName!
+        : _defaultDeviceName;
+
+    final box = await Hive.openBox(_bleConfigBoxName);
+    await box.put(_deviceNameKey, normalizedDeviceName);
+    await box.put(_deviceIdKey, nextDeviceId);
+
+    deviceName = normalizedDeviceName;
+    deviceId = nextDeviceId;
+    notifyListeners();
   }
 
   Future<void> _loadSavedTimeOn() async {
@@ -197,7 +237,8 @@ class BLEController extends ChangeNotifier {
       await scanSubscription?.cancel();
       scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (final result in results) {
-          if (result.device.platformName == 'ESP32-Motor-Control') {
+          if (result.device.platformName == deviceName &&
+              result.device.remoteId.str == deviceId) {
             print('ESP32 encontrado');
             stopScan();
             connectToDevice(result.device);

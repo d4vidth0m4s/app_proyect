@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:app_proyect/features/home/home_screen.dart';
 import 'package:app_proyect/features/programs/programs_screen.dart';
 import 'package:app_proyect/features/alerts/alerts_screen.dart';
+import 'package:app_proyect/features/settings/settings_screen.dart';
 import 'package:app_proyect/core/constants/app_constants.dart';
 
 class BottomNavigation extends StatefulWidget {
@@ -22,6 +23,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
     const HomeScreen(),
     const ProgramsScreen(),
     const AlertScreen(),
+    const SettingsScreen(),
   ];
 
   @override
@@ -71,11 +73,25 @@ class _BottomNavigationState extends State<BottomNavigation> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildNavItem(icon: Icons.home_outlined, index: 0),
-                        _buildNavItem(icon: Icons.list_alt_outlined, index: 1),
+                        _buildNavItem(
+                          icon: Icons.home_outlined,
+                          index: 0,
+                          label: 'Inicio',
+                        ),
+                        _buildNavItem(
+                          icon: Icons.list_alt_outlined,
+                          index: 1,
+                          label: 'Programas',
+                        ),
                         _buildNavItem(
                           icon: Icons.warning_amber_outlined,
                           index: 2,
+                          label: 'Alertas',
+                        ),
+                        _buildNavItem(
+                          icon: Icons.settings,
+                          index: 3,
+                          label: 'Configuracion',
                         ),
                       ],
                     ),
@@ -89,7 +105,11 @@ class _BottomNavigationState extends State<BottomNavigation> {
     );
   }
 
-  Widget _buildNavItem({required IconData icon, required int index}) {
+  Widget _buildNavItem({
+    required IconData icon,
+    required int index,
+    required String label,
+  }) {
     final bool isSelected = _currentIndex == index;
 
     return GestureDetector(
@@ -116,6 +136,14 @@ class _BottomNavigationState extends State<BottomNavigation> {
                 size: 25,
               ),
             ),
+            if (isSelected)
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.primaryVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
           ],
         ),
       ),

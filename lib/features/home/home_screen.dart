@@ -1,6 +1,7 @@
 import 'package:app_proyect/core/constants/app_constants.dart';
 import 'package:app_proyect/models/layout_box.dart';
 import 'package:app_proyect/core/utils/calculate_layout_values.dart';
+import 'package:app_proyect/shared/widgets/app_feedback_snackbar.dart';
 import 'package:app_proyect/shared/widgets/decoration.dart';
 import 'package:flutter/material.dart';
 import 'package:app_proyect/shared/widgets/info_card.dart';
@@ -98,7 +99,7 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildMotorCard(Size screenSize, BLEController ble) {
     return InfoCard(
-      title: 'Motr',
+      title: 'Motor',
       icon: Icons.electric_bolt_outlined,
       height: screenSize.height * 0.2, // Ya estaba en porcentaje
       child: MiIndicadorCircular(
@@ -209,12 +210,10 @@ class HomeScreen extends StatelessWidget {
 
     if (!granted) {
       await ble.stopScan(reason: 'Permisos BLE rechazados');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Debes conceder permisos de Bluetooth para conectar el ESP32.',
-          ),
-        ),
+      AppFeedbackSnackBar.show(
+        context,
+        message: 'Debes conceder permisos de Bluetooth para conectar el ESP32.',
+        type: AppFeedbackType.error,
       );
       return;
     }
