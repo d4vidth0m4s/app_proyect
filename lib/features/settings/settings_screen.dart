@@ -1,6 +1,6 @@
 import 'package:app_proyect/core/constants/app_constants.dart';
 import 'package:app_proyect/features/settings/connection_settings_screen.dart';
-import 'package:app_proyect/features/settings/variables_settings_screen.dart';
+import 'package:app_proyect/features/settings/threshold_settings_screen.dart';
 import 'package:flutter/material.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -41,14 +41,14 @@ class SettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               _SettingsMenuCard(
-                title: 'Variables',
-                subtitle: 'Ajusta temperatura y corriente de histeresis.',
+                title: 'Umbrales',
+                subtitle: 'Ajusta corrientes y temperatura del control.',
                 icon: Icons.tune,
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const VariablesSettingsScreen(),
+                      builder: (context) => const ThresholdSettingsScreen(),
                     ),
                   );
                 },

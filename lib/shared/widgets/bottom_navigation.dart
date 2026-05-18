@@ -16,8 +16,9 @@ class _BottomNavigationState extends State<BottomNavigation> {
   int _currentIndex = 0;
   static const double _gradientInitialStop = 0.0;
   static const double _gradientPercent1 = 0.35;
-  static const double _gradientPercent2 = 0.70;
-  static const double _gradientPercent3 = 1.0;
+  static const double _gradientPercent2 = 0.75;
+  static const double _gradientPercent3 = 1;
+  static const double _navIconsTopOffset = 35.0;
 
   final List<Widget> _pages = [
     const HomeScreen(),
@@ -41,8 +42,9 @@ class _BottomNavigationState extends State<BottomNavigation> {
             left: 0,
             right: 0,
             bottom: 0,
+            
             child: SizedBox(
-              height: 60 + bottomInset,
+              height: 90 + bottomInset,
               child: Stack(
                 children: [
                   IgnorePointer(
@@ -69,29 +71,32 @@ class _BottomNavigationState extends State<BottomNavigation> {
                     ),
                   ),
                   Padding(
-                    padding: EdgeInsets.only(bottom: bottomInset),
+                    padding: EdgeInsets.only(
+                      top: _navIconsTopOffset,
+                      bottom: bottomInset,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildNavItem(
                           icon: Icons.home_outlined,
                           index: 0,
-                          label: 'Inicio',
+                        
                         ),
                         _buildNavItem(
                           icon: Icons.list_alt_outlined,
                           index: 1,
-                          label: 'Programas',
+                        
                         ),
                         _buildNavItem(
                           icon: Icons.warning_amber_outlined,
                           index: 2,
-                          label: 'Alertas',
+                          
                         ),
                         _buildNavItem(
                           icon: Icons.settings,
                           index: 3,
-                          label: 'Configuracion',
+                          
                         ),
                       ],
                     ),
@@ -108,7 +113,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
   Widget _buildNavItem({
     required IconData icon,
     required int index,
-    required String label,
+
   }) {
     final bool isSelected = _currentIndex == index;
 
@@ -136,14 +141,7 @@ class _BottomNavigationState extends State<BottomNavigation> {
                 size: 25,
               ),
             ),
-            if (isSelected)
-              Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.primaryVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+
           ],
         ),
       ),

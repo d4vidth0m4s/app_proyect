@@ -235,14 +235,21 @@ class BLEController extends ChangeNotifier {
         return;
       }
 
+      if (deviceName.trim().isEmpty || deviceId.trim().isEmpty) {
+        await stopScan(reason: 'Configura nombre y MAC del ESP32 antes de conectar');
+        return;
+      }
+
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 10));
 
       await scanSubscription?.cancel();
       scanSubscription = FlutterBluePlus.scanResults.listen((results) {
         for (final result in results) {
 
-          if (result.device.platformName == deviceName &&
-              result.device.remoteId.str == deviceId) {
+          final scannedName = result.device.platformName.trim();
+          final scannedId = result.device.remoteId.str.trim();
+
+          if (scannedName == deviceName.trim() && scannedId == deviceId.trim()) {
             print('ESP32 encontrado');
 
             stopScan();
@@ -337,25 +344,31 @@ class BLEController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void sendCommand(String estado, {bool apagadoEmergencia = false}) async {
+  Future<bool> sendCommand(
+    String estado, {
+    bool apagadoEmergencia = false,
+    bool isConfigCommand = false,
+  }) async {
     if (!isConnected || rxCharacteristic == null) {
       print('No conectado');
-      return;
+      return false;
     }
 
-    final command = {
-      'estado': estado,
-      'apagadodeemergencia': apagadoEmergencia,
-    };
-
-    final jsonString = json.encode(command);
+    final jsonString = isConfigCommand
+        ? estado
+        : json.encode({
+            'estado': estado,
+            'apagadodeemergencia': apagadoEmergencia,
+          });
     final bytes = utf8.encode(jsonString);
 
     try {
       await rxCharacteristic!.write(bytes);
       print('Comando enviado: $jsonString');
+      return true;
     } catch (e) {
       print('Error al enviar comando: $e');
+      return false;
     }
   }
 

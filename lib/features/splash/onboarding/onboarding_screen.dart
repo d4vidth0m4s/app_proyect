@@ -183,15 +183,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              if (_currentIndex < _pages.length - 1)
-                TextButton(
-                  onPressed: _finishOnboarding,
-                  child: const Text(
-                    'Saltar',
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
-                ),
-            ],
+             ],
           ),
         ),
         Expanded(
@@ -284,16 +276,41 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget _buildQrScannerPage(BuildContext context, OnboardingPage page) {
     return Padding(
       padding: const EdgeInsets.all(24),
-      child: QrDeviceScanner(
-        title: page.title,
-        description: page.description,
-        scannerHeight: 200,
-        scannerWidth: 200,
-        onConfigDetected: (config) async {
-          await context.read<BLEController>().loadDeviceConfig(config);
-          if (!mounted) return;
-          await _finishOnboarding();
-        },
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            page.title,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            page.description,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Center(
+            child: QrDeviceScanner(
+              scannerHeight: 200,
+              scannerWidth: 200,
+              onConfigDetected: (config) async {
+                await context.read<BLEController>().loadDeviceConfig(config);
+                if (!mounted) return;
+                await _finishOnboarding();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

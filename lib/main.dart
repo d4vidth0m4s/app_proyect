@@ -1,7 +1,6 @@
-import 'package:app_proyect/core/constants/app_constants.dart';
 import 'package:app_proyect/core/theme/app_theme.dart';
 import 'package:app_proyect/data/ble/ble_controller.dart';
-import 'package:app_proyect/features/chat/chat_screen.dart';
+import 'package:app_proyect/features/chat/widgets/voice_chat_fab.dart';
 import 'package:app_proyect/features/splash/splash_screen.dart';
 import 'package:app_proyect/providers/alert_provider.dart';
 import 'package:app_proyect/providers/time_record_helper.dart';
@@ -76,24 +75,9 @@ class MainScreen extends StatelessWidget {
         Positioned(
           bottom: 110,
           right: 20,
-          child: _buildFloatingButton(context),
+          child: const VoiceChatFAB(),
         ),
       ],
-    );
-  }
-
-  Widget _buildFloatingButton(BuildContext context) {
-    return FloatingActionButton(
-      shape: const CircleBorder(),
-      focusNode: FocusNode(),
-      backgroundColor: AppColors.secondaryVariant,
-      child: AppIcons.user(start: false),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ChatScreen()),
-        );
-      },
     );
   }
 }

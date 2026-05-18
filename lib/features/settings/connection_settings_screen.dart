@@ -14,6 +14,10 @@ class ConnectionSettingsScreen extends StatefulWidget {
 }
 
 class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
+  static final RegExp _macPattern = RegExp(
+    r'^[0-9A-Fa-f]{2}([:-][0-9A-Fa-f]{2}){5}$',
+  );
+
   late final TextEditingController _deviceNameController;
   late final TextEditingController _deviceIdController;
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -55,10 +59,8 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
             child: QrDeviceScanner(
-              title: 'Escanear QR',
-              description:
-                  'Carga automaticamente la configuracion BLE del dispositivo.',
               scannerHeight: 280,
+              scannerWidth: double.infinity,
               onConfigDetected: (config) async {
                 await context.read<BLEController>().loadDeviceConfig(config);
                 _deviceNameController.text =
@@ -149,12 +151,17 @@ class _ConnectionSettingsScreenState extends State<ConnectionSettingsScreen> {
                 TextFormField(
                   controller: _deviceIdController,
                   decoration: const InputDecoration(
-                    labelText: 'deviceId',
+                    labelText: 'MAC / deviceId',
+                    helperText: 'Ejemplo: AA:BB:CC:DD:EE:FF',
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Ingresa un deviceId.';
+                    final normalized = value?.trim() ?? '';
+                    if (normalized.isEmpty) {
+                      return 'Ingresa la MAC del dispositivo.';
+                    }
+                    if (!_macPattern.hasMatch(normalized)) {
+                      return 'Usa formato MAC valido.';
                     }
                     return null;
                   },

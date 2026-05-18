@@ -21,7 +21,7 @@ class ConfigBottomSheet extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.0),
           child: Text(
-            "Para conectar un dispositivo, asegurate de que el ESP32 este activado y en modo de emparejamiento.",
+            "Para vincular su trituradora, encienda la máquina y asegúrese de que la conexión esté activa y en modo de emparejamiento.",
             style: TextStyle(fontSize: 14, color: Colors.black87),
             textAlign: TextAlign.center,
           ),
@@ -39,10 +39,9 @@ class ConfigBottomSheet extends StatelessWidget {
                 : Colors.orange.shade200,
             borderRadius: BorderRadius.circular(12),
             image: DecorationImage(
-              image: AssetImage(
-                'assets/images/esp32_wroom_32e.webp',
-              ), // AsegÃºrate de agregarla en `pubspec.yaml`
-              fit: BoxFit.cover,
+              image: const AssetImage('assets/images/02.png'),
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
             ),
           ),
         ),
@@ -83,7 +82,7 @@ class ConfigBottomSheet extends StatelessWidget {
                   elevation: 0, // opcional: sin sombra
                 ),
                 child: Text(
-                  ble.isScanning ? 'Buscando...' : 'Buscar ESP32',
+                  ble.isScanning ? 'Buscando...' : 'Buscar Trituradora',
                   style: const TextStyle(
                     color: Colors.black45,
                     fontSize: 16,
@@ -132,7 +131,7 @@ class ConfigBottomSheet extends StatelessWidget {
 void showConfigBottomSheet(BuildContext context) {
   CustomBottomSheet.show(
     onConfirm: () => Navigator.pop(context),
-    title: 'Conertar ESP32',
+    title: 'Conectar Trituradora',
     context: context,
     initialChildSize: 0.6,
 
